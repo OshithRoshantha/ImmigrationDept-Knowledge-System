@@ -23,7 +23,6 @@ def QueryEmbedding(query):
         )
 
 def SearchByTitle(query_vector):
-    """Stage 1: Search using title vector"""
     return database.query_points(
         collection_name="PassportKnowledgeBase",
         query=query_vector,
