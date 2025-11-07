@@ -28,7 +28,7 @@ def SearchByTitle(query_vector):
         collection_name="PassportKnowledgeBase",
         query=query_vector,
         using="title_vector",
-        limit=10,
+        limit=3,
         with_payload=True
     ).points
 
@@ -109,4 +109,4 @@ def VectorSearch(query):
     
       
 if __name__ == "__main__":
-    print(VectorSearch("Business Visa Step-by-Step Procedure"))
+    print(VectorSearch("education visa Eligibility Criteria"))
