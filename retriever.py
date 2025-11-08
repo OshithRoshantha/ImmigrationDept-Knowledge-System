@@ -22,65 +22,6 @@ def QueryEmbedding(query):
             model="google/embeddinggemma-300m"
         )
 
-def SearchByTitle(query_vector):
-    return database.query_points(
-        collection_name="PassportKnowledgeBase",
-        query=query_vector,
-        using="title_vector",
-        limit=3,
-        with_payload=True
-    ).points
-
-def SearchBySummary(query_vector, title_candidates):
-    summary_results = []
-    candidate_titles = [candidate.payload["title"] for candidate in title_candidates]
-    
-    for title in candidate_titles:
-        res = database.query_points(
-            collection_name="PassportKnowledgeBase",
-            query=query_vector,
-            using="summary_vector",
-            query_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="title",
-                        match=models.MatchValue(value=title)
-                    )
-                ]
-            ),
-            limit=3,
-            with_payload=True,
-            with_vectors=False
-        ).points
-        summary_results.extend(res)
-
-    summary_results.sort(key=lambda x: x.score, reverse=True)
-    return summary_results[:5]
-
-def SearchByFullText(query_vector, summary_candidates):
-    chunk_results = []
-    for candidate in summary_candidates:
-        res = database.query_points(
-            collection_name="PassportKnowledgeBase",
-            query=query_vector,
-            using="chunk_vector",
-            query_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="summary",
-                        match=models.MatchValue(value=candidate.payload["summary"])
-                    )
-                ]
-            ),
-            limit=1,
-            with_payload=True,
-            with_vectors=False
-        ).points
-        chunk_results.extend(res)
-    
-    chunk_results.sort(key=lambda x: x.score, reverse=True)
-    return chunk_results[:2]
-
 def FinalContext(top_chunks):
     results = []
     
@@ -99,13 +40,63 @@ def FinalContext(top_chunks):
     
     return results
 
+def MultiVectorSearch(query_vector):
+    title_results = database.query_points(
+        collection_name="PassportKnowledgeBase",
+        query=query_vector,
+        using="title_vector",
+        limit=3,
+        with_payload=True
+    ).points
+    
+    summary_results = database.query_points(
+        collection_name="PassportKnowledgeBase",
+        query=query_vector,
+        using="summary_vector",
+        limit=25,
+        with_payload=True
+    ).points
+    
+    chunk_results = database.query_points(
+        collection_name="PassportKnowledgeBase",
+        query=query_vector,
+        using="chunk_vector",
+        limit=25,
+        with_payload=True
+    ).points
+    
+    weighted_scores = {}
+    weights = {"title": 0.9, "summary": 0.05, "chunk": 0.05}
+
+    for point in title_results:
+        if point.id not in weighted_scores:
+            weighted_scores[point.id] = {"point": point, "score": 0}
+        weighted_scores[point.id]["score"] += point.score * weights["title"]
+    
+    for point in summary_results:
+        if point.id not in weighted_scores:
+            weighted_scores[point.id] = {"point": point, "score": 0}
+        weighted_scores[point.id]["score"] += point.score * weights["summary"]
+
+    for point in chunk_results:
+        if point.id not in weighted_scores:
+            weighted_scores[point.id] = {"point": point, "score": 0}
+        weighted_scores[point.id]["score"] += point.score * weights["chunk"]
+    
+    sorted_results = sorted(weighted_scores.values(), key=lambda x: x["score"], reverse=True)
+    
+    result_points = []
+    for item in sorted_results[:3]:
+        point = item["point"]
+        point.score = item["score"]
+        result_points.append(point)
+    
+    return result_points
+
 def VectorSearch(query):
     query_vector = QueryEmbedding(query)
-    title_results = SearchByTitle(query_vector)
-    summary_results = SearchBySummary(query_vector, title_results)
-    final_results = SearchByFullText(query_vector, summary_results)
-    return FinalContext(final_results)
+    candidates = MultiVectorSearch(query_vector)
+    return FinalContext(candidates)
     
-      
 if __name__ == "__main__":
-    print(VectorSearch("education visa Eligibility Criteria"))
+    print(VectorSearch("eductaion visa Eligibility Criteria"))
