@@ -111,6 +111,7 @@ def ask_llm(query):
     
     return english_answer
 
-query = "ඔයා කව්ද"
-response = ask_llm(query)
-print(response)
+if __name__ == "__main__":
+    query = "Education Category)Eligibility Criteria"
+    response = ask_llm(query)
+    print(response)
