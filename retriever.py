@@ -41,47 +41,47 @@ def FinalContext(top_chunks):
     return results
 
 def MultiVectorSearch(query_vector):
-    title_results = database.query_points(
+    title_results = database.search(
         collection_name="PassportKnowledgeBase",
-        query=query_vector,
-        using="title_vector",
+        query_vector=("title_vector", query_vector),
         limit=3,
         with_payload=True
-    ).points
+    )
     
-    summary_results = database.query_points(
+    summary_results = database.search(
         collection_name="PassportKnowledgeBase",
-        query=query_vector,
-        using="summary_vector",
+        query_vector=("summary_vector", query_vector),
         limit=25,
         with_payload=True
-    ).points
+    )
     
-    chunk_results = database.query_points(
+    chunk_results = database.search(
         collection_name="PassportKnowledgeBase",
-        query=query_vector,
-        using="chunk_vector",
+        query_vector=("chunk_vector", query_vector),
         limit=25,
         with_payload=True
-    ).points
+    )
     
     weighted_scores = {}
     weights = {"title": 0.9, "summary": 0.05, "chunk": 0.05}
 
     for point in title_results:
-        if point.id not in weighted_scores:
-            weighted_scores[point.id] = {"point": point, "score": 0}
-        weighted_scores[point.id]["score"] += point.score * weights["title"]
+        point_id = point.id
+        if point_id not in weighted_scores:
+            weighted_scores[point_id] = {"point": point, "score": 0}
+        weighted_scores[point_id]["score"] += point.score * weights["title"]
     
     for point in summary_results:
-        if point.id not in weighted_scores:
-            weighted_scores[point.id] = {"point": point, "score": 0}
-        weighted_scores[point.id]["score"] += point.score * weights["summary"]
+        point_id = point.id
+        if point_id not in weighted_scores:
+            weighted_scores[point_id] = {"point": point, "score": 0}
+        weighted_scores[point_id]["score"] += point.score * weights["summary"]
 
     for point in chunk_results:
-        if point.id not in weighted_scores:
-            weighted_scores[point.id] = {"point": point, "score": 0}
-        weighted_scores[point.id]["score"] += point.score * weights["chunk"]
+        point_id = point.id
+        if point_id not in weighted_scores:
+            weighted_scores[point_id] = {"point": point, "score": 0}
+        weighted_scores[point_id]["score"] += point.score * weights["chunk"]
     
     sorted_results = sorted(weighted_scores.values(), key=lambda x: x["score"], reverse=True)
     
