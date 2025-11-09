@@ -93,10 +93,10 @@ def MultiVectorSearch(query_vector):
     
     return result_points
 
-def VectorSearch(query):
+def SemanticSearch(query):
     query_vector = QueryEmbedding(query)
     candidates = MultiVectorSearch(query_vector)
     return FinalContext(candidates)
     
 if __name__ == "__main__":
-    print(VectorSearch("eductaion visa Eligibility Criteria"))
+    print(SemanticSearch("eductaion visa Eligibility Criteria"))
